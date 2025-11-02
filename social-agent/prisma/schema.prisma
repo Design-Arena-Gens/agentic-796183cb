@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Trend {
+  id              String           @id @default(cuid())
+  source          String
+  title           String
+  description     String?
+  link            String?
+  language        String
+  region          String?
+  category        String?
+  popularityScore Float?
+  fetchedAt       DateTime         @default(now())
+  approvedAt      DateTime?
+  status          TrendStatus      @default(PENDING)
+  tags            String         @default("[]")
+  metadata        Json?
+
+  contents        GeneratedContent[]
+  auditLogs       AuditLog[]
+}
+
+model GeneratedContent {
+  id             String        @id @default(cuid())
+  trend          Trend         @relation(fields: [trendId], references: [id])
+  trendId        String
+  platform       String
+  tone           String?
+  prompt         String
+  body           String
+  imagePrompt    String?
+  imageUrl       String?
+  scheduledFor   DateTime?
+  status         ContentStatus @default(DRAFT)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  metadata       Json?
+
+  postingJobs    PostingJob[]
+}
+
+model PostingJob {
+  id             String        @id @default(cuid())
+  content        GeneratedContent @relation(fields: [contentId], references: [id])
+  contentId      String
+  platform       String
+  scheduledFor   DateTime
+  executedAt     DateTime?
+  status         JobStatus      @default(PENDING)
+  responseLog    Json?
+  errorMessage   String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model PlatformAccount {
+  id          String      @id @default(cuid())
+  platform    String
+  label       String
+  isEnabled   Boolean     @default(true)
+  credentials Json
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  trend     Trend?   @relation(fields: [trendId], references: [id])
+  trendId   String?
+  action    String
+  message   String?
+  createdAt DateTime @default(now())
+  metadata  Json?
+}
+
+enum TrendStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ContentStatus {
+  DRAFT
+  QUEUED
+  POSTED
+  FAILED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
